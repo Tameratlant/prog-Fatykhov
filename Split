@@ -1,0 +1,60 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+
+#define max_token_size 1000
+
+
+void Split(char* string, 
+    char* delimiters, 
+    char*** tokens, 
+    int* tokensCount) {
+
+
+    char* pointer = strtok(string, delimiters);
+
+
+    while (pointer != NULL) {
+
+        strcpy((*tokens)[*tokensCount], pointer);
+        (*tokensCount)++;
+        pointer = strtok(NULL, delimiters);
+    }
+}
+//Не смотрите в main, он пока только для теста(вроде задание было написать функцию34)
+int main() {
+
+    int i = 0;
+    int tokens_count = 0;
+    char stdin_string[21] = "mom washed the frame";
+    char stdin_delimiters[1] = { };
+    int tokens_number = 1;
+    char** tokens = (char**)malloc(sizeof(char*) * tokens_number);
+    
+
+    gets(stdin_string);
+
+    gets(stdin_delimiters);
+
+    for (i = 0; i < tokens_number; i++) {
+
+        tokens[i] = malloc(sizeof(char) * max_token_size);
+
+    }
+    Split ((char*)stdin_string, (char*)stdin_delimiters, &tokens, &tokens_count);
+
+    for (i = 0; i < tokens_count; i++) {
+
+        printf("%d word: %s\n", i + 1, tokens[i]);
+    }
+
+    for (i = 0; i < tokens_number; i++) {
+        free(tokens[i]);
+    }
+    free(tokens);
+
+    return 0;
+}
+
