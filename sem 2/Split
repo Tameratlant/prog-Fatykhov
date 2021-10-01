@@ -31,9 +31,9 @@ int main() {
     int toknumber = 100;
     char** tokens = (char**)malloc(sizeof(char*) * toknumber);          //массив токенов(toknumber - их число)
 
-    printf("Enter a string (including delimiters): ");                  //заполнение строк
+                                                                         //заполнение строк
     gets(stdin_string);
-    printf("Enter a delimiter: ");
+   
     gets(stdin_delimiters);
 
     for (i = 0; i < toknumber; i++) {                                   //динамическое выделение памяти
@@ -45,7 +45,7 @@ int main() {
 
 
     for (i = 0; i < tokens_count; i++) {
-        printf("%d word: %s\n", i + 1, tokens[i]);                      //вывод для проверки
+        printf(" %s\n", tokens[i]);                                     //вывод для проверки
     }
     for (i = 0; i < toknumber; i++) {                                   //памяти всего 8Гб, самому нужна
         free(tokens[i]);
