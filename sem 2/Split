@@ -1,11 +1,11 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-
 #define max_token_size 1000
+
+
 
 
 void Split(char* string, 
@@ -13,49 +13,44 @@ void Split(char* string,
     char*** tokens, 
     int* tokensCount) {
 
+    char* p = strtok(string, delimiters);
 
-    char* pointer = strtok(string, delimiters);
+    while (p != NULL) {
 
-
-    while (pointer != NULL) {
-
-        strcpy((*tokens)[*tokensCount], pointer);
+        strcpy((*tokens)[*tokensCount], p);
         (*tokensCount)++;
-        pointer = strtok(NULL, delimiters);
+        p = strtok(NULL, delimiters);
     }
 }
-//Не смотрите в main, он пока только для теста(вроде задание было написать функцию34)
-// TODO: сделайте, пожалуйста, так, чтобы в main можно было смотреть :) Запустил программу и она, кажется, не работает.
+
 int main() {
+    //На числа лучше не смотрите, взяты с потолка исключительно для теста. В остальной main теперь можно смотреть)
 
-    int i = 0;
-    int tokens_count = 0;
-    char stdin_string[21] = "mom washed the frame";
-    char stdin_delimiters[1] = { };
-    int tokens_number = 1;
-    char** tokens = (char**)malloc(sizeof(char*) * tokens_number);
-    
+    int i = 0, tokens_count = 0;
+    char stdin_string[100] = { 0 }, stdin_delimiters[100] = { 0 };      
+    int toknumber = 100;
+    char** tokens = (char**)malloc(sizeof(char*) * toknumber);          //массив токенов(toknumber - их число)
 
+    printf("Enter a string (including delimiters): ");                  //заполнение строк
     gets(stdin_string);
-
+    printf("Enter a delimiter: ");
     gets(stdin_delimiters);
 
-    for (i = 0; i < tokens_number; i++) {
-
-        tokens[i] = malloc(sizeof(char) * max_token_size);
-
+    for (i = 0; i < toknumber; i++) {                                   //динамическое выделение памяти
+        tokens[i] = malloc(sizeof(char) * 100);                         
     }
-    Split ((char*)stdin_string, (char*)stdin_delimiters, &tokens, &tokens_count);
+
+    Split((char*)stdin_string, (char*)stdin_delimiters, &tokens, &tokens_count);
+                                                                            
+
 
     for (i = 0; i < tokens_count; i++) {
-
-        printf("%d word: %s\n", i + 1, tokens[i]);
+        printf("%d word: %s\n", i + 1, tokens[i]);                      //вывод для проверки
     }
-
-    for (i = 0; i < tokens_number; i++) {
+    for (i = 0; i < toknumber; i++) {                                   //памяти всего 8Гб, самому нужна
         free(tokens[i]);
     }
     free(tokens);
-
     return 0;
 }
+
