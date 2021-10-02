@@ -22,37 +22,52 @@ void Split(char* string,
     }
 }
 
-
+//Объявляем define:
 
 #define TIMEOUT 5
+#define max_string_lenght 100
+#define max_tokens_count 100
+#define max_token_lenght 100
 
 int main() {
-    //как и в Split, числа 100 не несут огромнго смысла и взяты с потолка.
-    int tokens_number = 100;
-    int i = 0, tokens_count = 0, string_counter = 0, child_id = 0;          //заполнение нужных полей
+   
+    //int tokens_number = 100;
+    int i = 0; 
+    int tokens_count = 0; 
+    int string_counter = 0; 
+    int child_id = 0;          //заполнение нужных полей
     char stdin_delimiters[] = { ' ', '\n', '\0' };
-    char stdin_string[100] = { 0 };
+    char stdin_string[max_string_lenght] = { 0 };
 
 
-    FILE* fp; 
-    fp = fopen("tasks.txt", "r");
+    FILE* fp;
+    if ((fp = fopen("tasks.txt", "r")) < 0) {
+        printf("Can\'t open FIFO for writting\n");
+        exit(-1);
+    }
 
-    char** tokens = (char**)malloc(sizeof(char*) * tokens_number);
+    char** tokens = (char**)malloc(sizeof(char*) * max_tokens_count);
 
-    for (i = 0; i < tokens_number; i++) {
-        tokens[i] = (char*)calloc(100, sizeof(char));                       //динамическое выделение памяти под каждое слово
-    } 
+    for (i = 0; i < max_tokens_count; i++) {
+        tokens[i] = (char*)calloc(max_tokens_count, sizeof(char));                       //динамическое выделение памяти под каждое слово
+    }
 
-    fgets(stdin_string, 100, fp);
+    fgets(stdin_string, max_string_lenght, fp);
     string_counter = atoi(stdin_string);                                    //разбивем строку
 
     for (i = 0; i < string_counter; i++) {
-        fgets(stdin_string, 100, fp);
-        pid_t pid = fork();
+        fgets(stdin_string, max_string_lenght, fp);
+
+        if ((pid_t pid = fork()) < 0) {
+            printf("Can\'t fork child\n");
+            exit(-1);
+        }
         if (pid == 0) {
             child_id = getpid();
+
             Split((char*)stdin_string, (char*)stdin_delimiters, &tokens, &tokens_count);
-            sleep(atoi(tokens[0])); 
+
+            sleep(atoi(tokens[0]));
             execvp(tokens[1], tokens + 1);
             exit(0);
         }
@@ -66,11 +81,12 @@ int main() {
         else
             kill(child_id, SIGTERM);                                        //если нет, добиваем
     }
-    for (i = 0; i < tokens_number; i++) {
+
+    for (i = 0; i < max_tokens_count; i++) {
         free(tokens[i]);
     }
+
     free(tokens);
     fclose(fp);
     return 0;
 }
-
