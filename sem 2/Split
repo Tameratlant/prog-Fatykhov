@@ -2,17 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+// TODO: в следующий раз убирайте лишние пустые строки сами, пожалуйста
 
 #define max_token_size 1000
-
-
-
 
 void Split(char* string, 
     char* delimiters, 
     char*** tokens, 
     int* tokensCount) {
-
     char* p = strtok(string, delimiters);
 
     while (p != NULL) {
@@ -27,6 +24,7 @@ int main() {
     //На числа лучше не смотрите, взяты с потолка исключительно для теста. В остальной main теперь можно смотреть)
 
     int i = 0, tokens_count = 0;
+    // TODO: никаких магических чисел вроде 100 быть не должно в коде -> только константы с понятными именами.
     char stdin_string[100] = { 0 }, stdin_delimiters[100] = { 0 };      
     int toknumber = 100;
     char** tokens = (char**)malloc(sizeof(char*) * toknumber);          //массив токенов(toknumber - их число)
@@ -42,8 +40,6 @@ int main() {
 
     Split((char*)stdin_string, (char*)stdin_delimiters, &tokens, &tokens_count);
                                                                             
-
-
     for (i = 0; i < tokens_count; i++) {
         printf(" %s\n", tokens[i]);                                     //вывод для проверки
     }
@@ -53,4 +49,3 @@ int main() {
     free(tokens);
     return 0;
 }
-
