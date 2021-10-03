@@ -29,6 +29,8 @@ void Split(char* string,
 #define max_tokens_count 100
 #define max_token_lenght 100
 
+// ваш код прям 1 в 1 совпадает с кодом, который уже проверял
+
 int main() {
    
     //int tokens_number = 100;
