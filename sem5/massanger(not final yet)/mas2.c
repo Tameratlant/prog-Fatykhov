@@ -16,7 +16,7 @@ int main() {
     char name2[] = "fifo2.fifo";
     /*
     (void)umask(0);
-    if (mknod(name2, S_IFIFO | 0666, 0) < 0) {
+    if (mknod(name1, S_IFIFO | 0666, 0) < 0) {
         printf("Can\'t create FIFO 1\n");
         exit(-1);
     }
@@ -25,33 +25,37 @@ int main() {
         exit(-1);
     }
     */
-
+	result = fork();
     ///////////////////////////////////////////////
-    if ((result = fork()) > 0) {            //сидим в пишущем в консоль процессе
-        if ((fd = open(name2, O_WRONLY)) < 0) {
-            printf("Can\'t open FIFO for writting\n");
-            exit(-1);
-        }
-        while (1) {
+    if (result > 0) {            //сидим в пишущем в консоль процессе
+       
+            if ((fd = open(name2, O_WRONLY)) < 0) {
+                printf("Can\'t open FIFO for writting\n");
+                exit(-1);
+            }
+	     while (1) {
             fgets(massage, 100, stdin);
 
             write(fd, massage, 100);                                        //надеюсь, написали в FIFO
+	     }
+	    close(fd);
         }
-        close(fd);
 
-    }
+    
     ///////////////////////////////////////////////
 
     if (result == 0) {                                                       //сидим в читающем из FIFO процессе
         if ((fd = open(name1, O_RDONLY)) < 0) {
-            printf("Can\'t open FIFO for reading\n");
-            exit(-1);
-        }
-        while (1) {
+            
+                printf("Can\'t open FIFO for writting\n");
+                exit(-1);
+            }
+	     while (1) {
             read(fd, massage, 100);
             printf("%s\n", massage);
-        }
-        close(fd);
+	     }
+            close(fd);
+        
     }
     return 0;
 }
