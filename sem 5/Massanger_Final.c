@@ -56,8 +56,18 @@ int main(int argc, char** argv) {
     //int main() {
     char name1[] = "fifo1.fifo";
     char name2[] = "fifo2.fifo";
+    
+    (void)umask(0);
+    if (mknod(name1, S_IFIFO | 0666, 0) < 0) {
+        printf("Can\'t create FIFO 1\n");
+        exit(-1);
+    }
+    if (mknod(name2, S_IFIFO | 0666, 0) < 0) {
+        printf("Can't\'t create FIFO 2\n");
+        exit(-1);
+    }
 
-    printf("Suck\n");
+    
     //printf("%c\n", *argv[1]);
 
     if (strcmp(argv[1], "1") == 0) {
