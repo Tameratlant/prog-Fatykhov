@@ -1,0 +1,129 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <time.h>
+#include <math.h>
+
+
+#define NUMBER_OF_THREADS 10
+#define MAX_DATA_SIZE 10000
+double* data = NULL;
+
+
+
+
+double mean[NUMBER_OF_THREADS];							//массив средних значений конуретных кусков
+double square_deviation[NUMBER_OF_THREADS];				//Массив суммы средних значений квадратов отклонения конкретных кусков
+double mean_square[NUMBER_OF_THREADS];					//Массив средних значнеий квадрата
+int segment_size = MAX_DATA_SIZE / NUMBER_OF_THREADS;	//Из условий длинна массива кратна числу процессов 
+
+void Make_data() {
+	for (int i = 0; i < MAX_DATA_SIZE + 1; i++) {
+		data[i] = rand();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Блок, посвященный нахождению среднего значения(оно же - мат. ожидание) и отклнения от этого значения.
+
+
+
+// Создаем структуру, хранящую координаты начала и конца данного отрезка и его индекс 
+typedef struct {
+	int start;
+	int end;
+	int id;
+} Segment;
+
+Segment segments[1000];
+
+
+
+void* Summation(void* dummy) {
+	Segment segment = *((Segment*)dummy);
+	for (int i = segment.start; i < segment.end + 1; i++) {
+		mean[segment.id] += data[i];
+	}
+	mean[segment.id] = mean[segment.id] / (segment.end - segment.start);
+	return NULL;
+}
+
+void* Summation_square(void* dummy) {
+	Segment segment = *((Segment*)dummy);
+	for (int i = segment.start; i < segment.end + 1; i++) {
+		square_deviation[segment.id] += pow(data[i] - mean[segment.id], 2);
+		mean_square[segment.id] += pow(data[i], 2);
+	}
+	square_deviation[segment.id] = square_deviation[segment.id] / (segment.end - segment.start);
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Функция, создающая по нити на каждый кусок данных для последующей обработки
+void Create_threds(Segment* segments) {
+
+	pthread_t threds_id[NUMBER_OF_THREADS];
+	int result;
+	for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+		if (result = (pthread_create(&(threds_id[i]), (pthread_attr_t*)NULL, Summation, &(segments[i]))) != 0) {
+			printf("Error while creating a thread, return value = %d\n", result);
+			exit(-1);
+		}
+	}
+	for (int i = 0; i < NUMBER_OF_THREADS; i++) {				//Ждем завершения каждого
+		pthread_join(threds_id[i], NULL);
+	}
+}
+
+int main() {
+	data = (double*)calloc(MAX_DATA_SIZE, sizeof(double));
+	Make_data;				//заполнили массив чем-то
+
+	//Ассоциируем каждый кусок данных с каким то сегментом
+	for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+		segments[i].start = 0;
+		segments[i].end = segment_size;
+		segments[i].id = &(data[i]);
+	}
+
+
+	void Create_threds(Segment * segments) {
+
+		pthread_t threds_id[NUMBER_OF_THREADS];
+		int result;
+		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+			if (result = (pthread_create(&(threds_id[i]), (pthread_attr_t*)NULL, Summation, &(segments[i]))) != 0) {
+				printf("Error while creating a thread, return value = %d\n", result);
+				exit(-1);
+			}
+		}
+		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+			pthread_join(threds_id[i], NULL);
+		}
+	}
+
+	//Финальная обработка
+	double total, total_mean, total_square_deviation, mean_square_deviation, total_mean_square;
+
+	for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+		total =+ mean[i];
+		total_square_deviation += square_deviation[i];
+			total_mean_square += mean_square[i];
+	}
+	total_mean = total / NUMBER_OF_THREADS;
+	mean_square_deviation = total_square_deviation / NUMBER_OF_THREADS;
+	total_mean_square = total_mean_square / NUMBER_OF_THREADS;
+
+	double sum = 0, sum_square = 0, math_expectation = 0, math_expectation_of_square = 0;
+
+	printf("Total sum = %lf \n", total_mean);
+	printf("Math expectation = %lf\n", total_mean_square);
+	printf("Dispersion = %lf\n", total_mean_square - pow(total_mean, 2));
+
+	free(data);
+	return 0;
+}
+
