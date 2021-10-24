@@ -117,8 +117,6 @@ int main() {
 	mean_square_deviation = total_square_deviation / NUMBER_OF_THREADS;
 	total_mean_square = total_mean_square / NUMBER_OF_THREADS;
 
-	double sum = 0, sum_square = 0, math_expectation = 0, math_expectation_of_square = 0;
-
 	printf("Total sum = %lf \n", total_mean);
 	printf("Math expectation = %lf\n", total_mean_square);
 	printf("Dispersion = %lf\n", total_mean_square - pow(total_mean, 2));
