@@ -100,7 +100,7 @@ void Make_data() {
 		double total, total_mean, total_square_deviation, mean_square_deviation, total_mean_square;
 
 		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-			total = +mean[i];
+			total +=mean[i];
 			total_square_deviation += square_deviation[i];
 			total_mean_square += mean_square[i];
 		}
