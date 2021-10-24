@@ -84,7 +84,7 @@ void Make_data() {
 
 	int main() {
 		data = (double*)calloc(MAX_DATA_SIZE, sizeof(double));
-		Make_data;				//заполнили массив чем-то
+		Make_data();				//заполнили массив чем-то
 
 		//Ассоциируем каждый кусок данных с каким то сегментом
 		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
