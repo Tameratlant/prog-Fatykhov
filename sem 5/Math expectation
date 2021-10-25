@@ -1,7 +1,5 @@
-//Запускать с -pthread -lm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
+//Запускать с - pthread - lm
+//Для упрощения дебага почти все, что можно, вынесено в отдельные функции
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -11,107 +9,93 @@
 #include <pthread.h>
 #include <time.h>
 #include <math.h>
+#define THREADS_NUMBER 10
+#define DATA_SIZE 1000
 
-
-#define NUMBER_OF_THREADS 10
-#define MAX_DATA_SIZE 10000
 double* data = NULL;
+double sum_of_segment[THREADS_NUMBER];
+double sum_square_of_segment[THREADS_NUMBER];
+
+typedef struct {
+	int start;
+	int end;
+	int id;
+} Segment;
+Segment segments[THREADS_NUMBER];
+int seze_of_segment = DATA_SIZE / THREADS_NUMBER;
+
+pthread_t thread_id[THREADS_NUMBER];
 
 
-
-
-double mean[NUMBER_OF_THREADS];							//массив средних значений конуретных кусков
-double square_deviation[NUMBER_OF_THREADS];				//Массив суммы средних значений квадратов отклонения конкретных кусков
-double mean_square[NUMBER_OF_THREADS];					//Массив средних значнеий квадрата
-int segment_size = MAX_DATA_SIZE / NUMBER_OF_THREADS;	//Из условий длинна массива кратна числу процессов 
-
-void Make_data() {
-	for (int i = 0; i < MAX_DATA_SIZE + 1; i++) {
+void make_data() {														//Заполняем массив мусором, который будем анализировать
+	//printf("1");
+	for (int i = 0; i < DATA_SIZE; i++) {
 		data[i] = rand();
 	}
+}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-	// Блок, посвященный нахождению среднего значения(оно же - мат. ожидание) и отклнения от этого значения.
-
-
-
-	// Создаем структуру, хранящую координаты начала и конца данного отрезка и его индекс 
-	typedef struct {
-		int start;
-		int end;
-		int id;
-	} Segment;
-
-	Segment segments[1000];
-
-
-
-	void* Summation(void* dummy) {
-		Segment segment = *((Segment*)dummy);
-		for (int i = segment.start; i < segment.end + 1; i++) {
-			mean[segment.id] += data[i];
-		}
-		mean[segment.id] = mean[segment.id] / (segment.end - segment.start);
-		return NULL;
+void* Sum(void* dummy) {												//Находим сумму и сумму квадратов конкретного куска
+	//printf("2");
+	Segment segment = *((Segment*)dummy);
+	sum_of_segment[segment.id] = 0;
+	sum_square_of_segment[segment.id] = 0;
+	for (int i = segment.start; i < segment.end; i++) {
+		sum_of_segment[segment.id] += data[i];
+		sum_square_of_segment[segment.id] += pow(data[i], 2);
 	}
+}
 
-	void* Summation_square(void* dummy) {
-		Segment segment = *((Segment*)dummy);
-		for (int i = segment.start; i < segment.end + 1; i++) {
-			square_deviation[segment.id] += pow(data[i] - mean[segment.id], 2);
-			mean_square[segment.id] += pow(data[i], 2);
-		}
-		square_deviation[segment.id] = square_deviation[segment.id] / (segment.end - segment.start);
-		return NULL;
+void fill_segments() {													//Распределяем куски данных по сегментам
+	//printf("3");
+	for (int i = 0; i < THREADS_NUMBER; i++) {
+		segments[i].id = i;
+		segments[i].start = seze_of_segment * i;
+		segments[i].end = segments[i].start + seze_of_segment;
 	}
+}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-	// Функция, создающая по нити на каждый кусок данных для последующей обработки
-	void Create_threds(Segment * segments) {
-
-		pthread_t threds_id[NUMBER_OF_THREADS];
-		int result;
-		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-			if (result = (pthread_create(&(threds_id[i]), (pthread_attr_t*)NULL, Summation, &(segments[i]))) != 0) {
-				printf("Error while creating a thread, return value = %d\n", result);
-				exit(-1);
-			}
-		}
-		for (int i = 0; i < NUMBER_OF_THREADS; i++) {				//Ждем завершения каждого
-			pthread_join(threds_id[i], NULL);
+void thread_create() {
+	int result = 0;
+	
+	for (int i = 0; i < THREADS_NUMBER; i++) {							//Создаем нити и отдаем каждой по сегменту
+		if ((result = (pthread_create(&(thread_id[i]), 
+					  (pthread_attr_t*)NULL, 
+				      Sum, 
+					  &(segments[i])))) != 0) {
+			printf("Error on thread create, return value = %d\n", result);
+			exit(-1);
 		}
 	}
-
-	int main() {
-		data = (double*)calloc(MAX_DATA_SIZE, sizeof(double));
-		Make_data();				//заполнили массив чем-то
-
-		//Ассоциируем каждый кусок данных с каким то сегментом
-		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-			segments[i].start = 0;
-			segments[i].end = segment_size;
-			segments[i].id = &(data[i]);
-		}
-
-		Create_threds(Segment * segments);
-
-		
-		//Финальная обработка
-		double total, total_mean, total_square_deviation, mean_square_deviation, total_mean_square;
-
-		for (int i = 0; i < NUMBER_OF_THREADS; i++) {
-			total +=mean[i];
-			total_square_deviation += square_deviation[i];
-			total_mean_square += mean_square[i];
-		}
-		total_mean = total / NUMBER_OF_THREADS;
-		mean_square_deviation = total_square_deviation / NUMBER_OF_THREADS;
-		total_mean_square = total_mean_square / NUMBER_OF_THREADS;
-
-		printf("Total sum = %lf \n", total_mean);
-		printf("Math expectation = %lf\n", total_mean_square);
-		printf("Dispersion = %lf\n", total_mean_square - pow(total_mean, 2));
-
-		free(data);
-		return 0;
+	for (int i = 0; i < THREADS_NUMBER; i++) {							//Ждем завершения исполнения
+		pthread_join(thread_id[i], NULL);
 	}
+}
+void results_out(double a, double b, double c) {						//Просто выводит все посчитанное
+	printf("The sum of all experimental data = %lf\n", a);
+	printf("Math expectation = %lf\n", b);
+	printf("Dispersion = %lf\n", c);
+}
+
+
+int main() {
+	int i = 0;
+	data = (double*)calloc(DATA_SIZE, sizeof(double));
+	make_data();
+	fill_segments();
+	thread_create();
+	double sum = 0, 
+		sum_square = 0, 
+		math_expectation = 0, 
+		math_expectation_of_square = 0;
+
+	for (i = 0; i < THREADS_NUMBER; i++) {								//Объединение того, что посчитали нити
+		sum += sum_of_segment[i];
+		sum_square += sum_square_of_segment[i];
+	}
+
+	math_expectation = sum / DATA_SIZE;
+	math_expectation_of_square = sum_square / DATA_SIZE;
+	results_out(sum, math_expectation, math_expectation_of_square - pow(math_expectation, 2));
+	free(data);
+	return 0;
+}
