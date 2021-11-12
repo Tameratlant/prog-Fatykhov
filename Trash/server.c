@@ -54,17 +54,14 @@ int main() {
     printf("Can\'t get msqid\n");
     exit(-1);
     }
-    printf("!");
-    printf ("%d", msqid);
+    //printf("!");
+    //printf ("%d", msqid);
 
     i = 1;
-    while( i !=0){
-        i =0;
-    printf("!!");
-    
-
-        
-        if((len = msgrcv(msqid, (struct mymsgbuf *) &mybuf, 200, 1, 0)) < 0){
+    while( i != 0){
+        //i =0;
+        //printf("!!"); 
+        if((len = msgrcv(msqid, &mybuf, sizeof(struct Info), 1, 0)) < 0){
             printf("Can\'t receive message from queue\n");
             //printf ("%d", errno);
             if (errno == E2BIG) printf("1");
@@ -77,13 +74,21 @@ int main() {
             exit(-1);
         }
         mybuf.mtype = mybuf.info.id;
+        printf("\n!!%d!!\n", mybuf.info.id);
         msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
 
         int result;
         if ((result = fork()) == 0) {
             mybuf.info.c = mult(mybuf.info.a, mybuf.info.b);
-            if (msgsnd(msqid, (struct msgbuf *) &mybuf, 200, 0) < 0){
+            if (msgsnd(msqid, &mybuf, sizeof(struct Info), 0) < 0){
                 printf("Can\'t send message to queue\n");
+                if (errno == EAGAIN) printf("1");
+                if (errno == EACCES) printf("2");
+                if (errno == EFAULT) printf("3");
+                if (errno == EIDRM) printf("4");
+                if (errno == EINTR) printf("5");
+                if (errno == EINVAL) printf("6");
+                if (errno == ENOMEM) printf("7");
                 msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
                 exit(-1);
             }

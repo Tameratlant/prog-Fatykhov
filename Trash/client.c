@@ -31,7 +31,11 @@ int main() {
     //struct Info info;
     key_t key; /* IPC ключ */
     int len;
-    //int size = size_of(Info);
+    int size = sizeof(mybuf);
+    printf("%d!!!\n", size);
+    printf("%d!!!\n", sizeof(double));
+    printf("%d!!!\n", sizeof(int));
+    printf("%d!!!\n", sizeof(long));
 
     /* Ниже следует пользовательская структура для сообщения */
     
@@ -64,7 +68,9 @@ int main() {
         assert(ref == 2);
         mybuf.mtype = 1;
         mybuf.info.id = getppid();
-        if (msgsnd(msqid, (struct msgbuf *) &mybuf, 200, 0) < 0){
+        printf ("\n!!%d!!\n", getppid());
+        
+        if (msgsnd(msqid,  &mybuf, sizeof(struct Info), 0) < 0){
             printf("Can\'t send message to queue\n");
             printf ("%d", errno);
             if (errno == EINVAL) printf("EAGAIN");
@@ -75,11 +81,12 @@ int main() {
     }
     /* Часть, принимающая ответ с сервера */
     if (result > 0) {
-        if((len = msgrcv(msqid, (struct msgbuf *) &mybuf, 200, getpid(), 0)) < 0){
+        
+        if((len = msgrcv(msqid,  &mybuf, sizeof(struct Info), getpid(), 0)) < 0){
             printf("Can\'t receive message from queue\n");
             exit(-1);
         }
-        msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
+        //msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
         printf("%lf\n", mybuf.info.c);
     }
 

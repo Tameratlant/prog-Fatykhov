@@ -14,15 +14,15 @@ error: initializer element is not constant
 #include <pthread.h>
 #include <time.h>
 #include <math.h>
-#define THREADS_NUMBER 2000
+#define THREADS_NUMBER 2
 #define DATA_SIZE 100000000
 
 /*	При DATA_SIZE 1000000000; THREADS_NUMBER 1 ноут намертво виснет
-	При DATA_SIZE 100000000; THREADS_NUMBER 1 Time working = 0.870569
-	При DATA_SIZE 100000000; THREADS_NUMBER 2 Time working = 2.287016
-	При DATA_SIZE 100000000; THREADS_NUMBER 3 Time working = 1.499357
-	При DATA_SIZE 100000000; THREADS_NUMBER 4 Time working = 5.210092
-	При DATA_SIZE 100000000; THREADS_NUMBER 5 Time working = 4.326549
+	При DATA_SIZE 100000000; THREADS_NUMBER 1 Time working = 0.99
+	При DATA_SIZE 100000000; THREADS_NUMBER 2 Time working = 0,73
+	При DATA_SIZE 100000000; THREADS_NUMBER 3 Time working = 0,65
+	При DATA_SIZE 100000000; THREADS_NUMBER 4 Time working = 4,56
+	При DATA_SIZE 100000000; THREADS_NUMBER 5 Time working = 3,58
 	При DATA_SIZE 100000000; THREADS_NUMBER 10 Time working = 5.516035
 	При DATA_SIZE 100000000; THREADS_NUMBER 50 Time working = 1.709575
 	При DATA_SIZE 100000000; THREADS_NUMBER 100 Time working = 1.376533
@@ -116,7 +116,8 @@ void results_out(double a, double b, double c, double time) {						//Прост�
 
 
 int main() {
-
+	srand(13);
+	/*
 	static clock_t startTime = (clock_t) -1;
 
 	if (startTime == -1) {startTime = clock();}
@@ -125,11 +126,20 @@ int main() {
         startTime = clock();
         
     }
-	
+	*/
 	int i = 0;
 	data = (double*)calloc(DATA_SIZE, sizeof(double));
 	make_data();
 	fill_segments();
+	static clock_t startTime = (clock_t) -1;
+
+        if (startTime == -1) {startTime = clock();}
+    else if ((startTime - clock() / CLOCKS_PER_SEC) > -1)
+    {
+        startTime = clock();
+
+    }
+
 	thread_create();
 	double sum = 0, 
 		sum_square = 0, 
