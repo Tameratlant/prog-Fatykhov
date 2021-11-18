@@ -1,102 +1,87 @@
-
-
-/* Программа 1 для иллюстрации работы с очередями сообщений */
-
- 
-
-/* Эта программа получает доступ к очереди сообщений,
-отправляет в нее 5 текстовых сообщений с типом 1
-и одно пустое сообщение с типом 255, которое будет служить
-для программы 2 сигналом прекращения работы. */
-
 #include <sys/types.h>
 #include <sys/ipc.h>
-#include <sys/msg.h>
-#include <string.h>
-#include <stdlib.h>
+#include <sys/sem.h>
 #include <stdio.h>
-#include <assert.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <math.h>
 
-#define LAST_MESSAGE 255 /* Тип сообщения для прекращения работы программы 2 */
+#define Table 3
 
-int main()
-    {
-    int msqid; /* IPC дескриптор для очереди сообщений */
 
-    char pathname[] = "Server.c"; /* Имя файла, использующееся для генерации ключа.
-    Файл с таким именем должен существовать в текущей директории */
+struct Dish {
+        int count;
+        int wash_time;
+        int wipe_time;
+}; 
 
-    key_t key; /* IPC ключ */
-
-    int i,len; /* Cчетчик цикла и длина информативной части сообщения */
-
-    /* Ниже следует пользовательская структура для сообщения */
-
-    struct Info {
-        int id;
-        double a;
-        double b;
-        double c;
-    };
+struct current_dish {
+    int type;
+    int wipe_time;
+};
 
     struct mymsgbuf
         {
         long mtype;
-        struct Info info;
+        struct current_dish current_dish;
         }mybuf;
+//Почему - то обычный встренный max не работал 
+int maxx (int a, int b) {
+    if (a > b) return a;
+    if (a <= b) return b;
+}
 
 
-    /* Генерируем IPC ключ из имени файла 09-1a.c в текущей директории
-    и номера экземпляра очереди сообщений 0. */
 
-    if((key = ftok(pathname,0)) < 0){
-    printf("Can\'t generate key\n");
-    exit(-1);
-    }
-
-    /* Пытаемся получить доступ по ключу к очереди сообщений, если она существует,
-    или создать ее, если она еще не существует, с правами доступа
-    read & write для всех пользователей */
-
-    if((msqid = msgget(key, 0666 | IPC_CREAT)) < 0){
-    printf("Can\'t get msqid\n");
-    exit(-1);
-    }
-
-    /* Посылаем в цикле 5 сообщений с типом 1 в очередь сообщений, идентифицируемую msqid.*/
-
+int main() {
     
+    int type;
+    int time;
+    int count;
+    FILE* fp = NULL;
 
-    /* Сначала заполняем структуру для нашего сообщения и определяем длину информативной части */
-    printf ("Enter the numbers\n");
-    int ref = scanf("%lf%lf", &mybuf.info.a, &mybuf.info.b);
-    assert(ref == 2);
+    fp = fopen("count.txt", "r");
+    int max_type;
+    while (fscanf(fp, "%d:%d\n", &type, &count) == 2) {
+        max_type = maxx(max_type, type);
+	}
+	fclose(fp);
+    //printf("!!\n");
+    struct Dish* dish = (struct Dish*)calloc(max_type + 2, sizeof(struct Dish));
+    //Прописываем "Стоп - слово"
+    dish[max_type + 1].count=-1;
+    //printf("!!\n");
 
-    mybuf.mtype = 1;
-    mybuf.info.id = getpid();
-    len = sizeof(mybuf) + 1;
 
-    /* Отсылаем сообщение. В случае ошибки сообщаем об этом и удаляем очередь сообщений из системы. */
+    //printf("45 %d\n", dish[0].wash_time);
+    dish[0].wash_time = 1;
+    //printf("47 %d\n", dish[0].wash_time);
+    fp = (FILE*)fopen("wash.txt", "r");
+    while (fscanf(fp, "%d:%d\n", &type, &time) == 2) {
+		dish[type].wash_time = time;
+	}
+    //printf("%d\n", dish[0].wash_time);
+	fclose(fp);
 
-    if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
-        printf("Can\'t send message to queue\n");
-        msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
-        exit(-1);
-        }
-    
+    fp = fopen("wipe.txt", "r");
+    while (fscanf(fp, "%d:%d\n", &type, &time) == 2) {
+		dish[type].wipe_time = time;
+	}
+	fclose(fp);
 
-    /* Отсылаем сообщение, которое заставит получающий процесс прекратить работу, с типом LAST_MESSAGE и длиной 0 */
+    fp = fopen("count.txt", "r");
+    while (fscanf(fp, "%d:%d\n", &type, &count) == 2) {
+		dish[type].count = count;
+	}
+	fclose(fp);
 
-    
+    printf ("%d %d %d %d\n", 0, dish[0].count, dish[0].wash_time, dish[0].wipe_time);
+    printf ("%d %d %d %d\n", 1, dish[1].count, dish[1].wash_time, dish[1].wipe_time);
+    printf ("%d %d %d %d\n", 2, dish[2].count, dish[2].wash_time, dish[2].wipe_time);
+    printf ("%d %d %d %d\n", 3, dish[3].count, dish[3].wash_time, dish[3].wipe_time);
 
-    if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, len, getpid(), 0)) < 0){
-    printf("Can\'t receive message from queue\n");
-    exit(-1);
-    }
-
-    printf("%lf\n", mybuf.info.c);
-
-    
-
-    return 0;
-} 
+    return 0; 
+}

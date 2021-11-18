@@ -14,8 +14,8 @@
 
 struct Dish {
         int count;
-        double wash_time;
-        double wipe_time;
+        int wash_time;
+        int wipe_time;
 }; 
 
 struct current_dish {
@@ -40,19 +40,19 @@ void Fill_data (struct Dish dish[]) {
     int time;
     int count;
     FILE* fp = NULL;
-    printf("43 %d\n", dish[0].wash_time);
+    //printf("43 %d\n", dish[0].wash_time);
     dish[0].wash_time = 1;
-    printf("45 %d\n", dish[0].wash_time);
+    //printf("45 %d\n", dish[0].wash_time);
     fp = (FILE*)fopen("wash.txt", "r");
     while (fscanf(fp, "%d:%d\n", &type, &time) == 2) {
 		dish[type].wash_time = time;
 	}
-    printf("%d\n", dish[0].wash_time);
+    //printf("%d\n", dish[0].wash_time);
 	fclose(fp);
 
     fp = fopen("wipe.txt", "r");
     while (fscanf(fp, "%d:%d\n", &type, &time) == 2) {
-		dish[type].wash_time = time;
+		dish[type].wipe_time = time;
 	}
 	fclose(fp);
 
@@ -78,35 +78,37 @@ void mysemop(int a) {
 }
 
 void wash(struct Dish dish[], int msqid) {
-    printf("!!\n");
+    //printf("!!\n");
     mysemop(-1);
     int i = 0;
     int len = sizeof(struct Dish);
     while(1){
-        printf("82\n");
-        /*
+        //printf("82\n");
+        
         if (dish[i].count == -1) {
-            printf("84\n");
+            //printf("84\n");
             mybuf.current_dish.type = -1;
+            mybuf.mtype = 1;
             if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
                 printf("Can\'t send message to queue\n");
                 msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
                 exit(-1);
             }
-            printf("91\n");
+            //printf("91\n");
             break;
         }
-        */
-        printf("95\n");
+        
+        //printf("95\n");
         printf ("Start washing type %d plate\n", i);
         printf("%d\n",dish[i].wash_time);
         sleep(dish[i].wash_time);
         
-        printf("99\n");
+        //printf("99\n");
             //dish[i].count = dish[i].count -1;
             printf ("End washing type %d plate\n", i);
             mybuf.current_dish.type = i;
             mybuf.current_dish.wipe_time = dish[i].wipe_time;
+            mybuf.mtype = 1;
             if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
                 printf("Can\'t send message to queue\n");
                 msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
@@ -122,7 +124,7 @@ void wipe(int msqid) {
     mysemop(-1);
     int len;
     while(1){
-        if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, 100, 0, 0)) < 0){
+        if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, 100, 1, 0)) < 0){
             printf("Can\'t receive message from queue\n");
             exit(-1);
         }
@@ -131,7 +133,7 @@ void wipe(int msqid) {
         }
         printf("Start to wipe type %d plate\n", mybuf.current_dish.type);
         sleep(mybuf.current_dish.wipe_time);
-        printf("End wash type %d palte\n", mybuf.current_dish.type);
+        printf("End wipe type %d palte\n", mybuf.current_dish.type);
     }
     mysemop(1);
 }
@@ -157,7 +159,7 @@ int main() {
     Fill_data (dish);
     
 
-    char pathname[] = "dish.c"; /* Имя файла, использующееся для генерации ключа. Файл с таким именем должен существовать в текущей директории */
+    char pathname[] = "Dish.c"; /* Имя файла, использующееся для генерации ключа. Файл с таким именем должен существовать в текущей директории */
 
     key_t key; /* IPC ключ */
 
@@ -205,7 +207,7 @@ int main() {
 
     
     if (result == 0) {
-        printf("!!\n");
+        //printf("!!\n");
         wash(dish, msqid);
     }
 
