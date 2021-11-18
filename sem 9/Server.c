@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <math.h>
 
+#define LIMIT 5
 int semid; /* IPC дескриптор для массива IPC семафоров */
 
 
@@ -78,10 +79,10 @@ int main()
         printf("Can\'t get msqid\n");
         exit(-1);
     }
-    //maxlen = sizeof(struct mymsgbuf);
+    //maxlen = sizeof(struct Info) + 1;
     maxlen = 300;
     while(1){
-
+        mysemop(LIMIT);
         // В бесконечном цикле принимаем сообщения 
 
         if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, maxlen, 1, 0)) < 0){
@@ -96,6 +97,7 @@ int main()
             msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
             exit(-1);
             }
+        mysemop(-1);
         int result = fork();
         if (result > 0) {
 
@@ -113,6 +115,7 @@ int main()
             exit(-1);
             }
         }
+        mysemop(1);
     }
 
     return 0; /* Исключительно для отсутствия warning'ов при компиляции. */
