@@ -1,87 +1,115 @@
+//Запускать с - pthread -lm -O3
+//Для упрощения дебага почти все, что можно, вынесено в отдельные функции
 #include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/sem.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <time.h>
 #include <math.h>
 
-#define Table 3
 
+#define NUMBER_OF_THREADS 2
+#define DATA_SIZE 100000000
 
-struct Dish {
-        int count;
-        int wash_time;
-        int wipe_time;
-}; 
+float *array = NULL;
+double segment_sum[NUMBER_OF_THREADS];
+double segment_sum_square[NUMBER_OF_THREADS];
 
-struct current_dish {
-    int type;
-    int wipe_time;
-};
+typedef struct {
+	int start;
+	int end;
+	int id;
+} Segment;
 
-    struct mymsgbuf
-        {
-        long mtype;
-        struct current_dish current_dish;
-        }mybuf;
-//Почему - то обычный встренный max не работал 
-int maxx (int a, int b) {
-    if (a > b) return a;
-    if (a <= b) return b;
+void* Sum (void* dummy) {
+	Segment segment = *((Segment *)dummy);
+	int i = 0;
+	segment_sum[segment.id] = 0;
+	segment_sum_square[segment.id] = 0;
+	for (i = segment.start; i < segment.end; i++) {
+		segment_sum[segment.id] += array[i];
+		segment_sum_square[segment.id] += pow(array[i], 2);
+	}
+    return NULL;
 }
 
+void Fill_segments(Segment segments[], int segment_size){
 
-
-int main() {
-    
-    int type;
-    int time;
-    int count;
-    FILE* fp = NULL;
-
-    fp = fopen("count.txt", "r");
-    int max_type;
-    while (fscanf(fp, "%d:%d\n", &type, &count) == 2) {
-        max_type = maxx(max_type, type);
+    for (int i = 0; i < NUMBER_OF_THREADS; i++) {
+		segments[i].id = i;
+		segments[i].start = segment_size * i;
+		if (i != NUMBER_OF_THREADS - 1) {
+			segments[i].end = segments[i].start + segment_size;
+		} else {
+			segments[i].end = DATA_SIZE;
+		}
 	}
-	fclose(fp);
-    //printf("!!\n");
-    struct Dish* dish = (struct Dish*)calloc(max_type + 2, sizeof(struct Dish));
-    //Прописываем "Стоп - слово"
-    dish[max_type + 1].count=-1;
-    //printf("!!\n");
+}
 
-
-    //printf("45 %d\n", dish[0].wash_time);
-    dish[0].wash_time = 1;
-    //printf("47 %d\n", dish[0].wash_time);
-    fp = (FILE*)fopen("wash.txt", "r");
-    while (fscanf(fp, "%d:%d\n", &type, &time) == 2) {
-		dish[type].wash_time = time;
+void make_data() {														//Заполняем массив мусором, который будем анализировать
+	//printf("1");
+	for (int i = 0; i < DATA_SIZE; i++) {
+		array[i] = rand() % 100;
 	}
-    //printf("%d\n", dish[0].wash_time);
-	fclose(fp);
+}
 
-    fp = fopen("wipe.txt", "r");
-    while (fscanf(fp, "%d:%d\n", &type, &time) == 2) {
-		dish[type].wipe_time = time;
+void results_out(double a, double b, double c, double time) {						//Просто выводит все посчитанное
+	printf("The sum of all experimental data = %lf\n", a);
+	printf("Math expectation = %lf\n", b);
+	printf("Dispersion = %lf\n", c);
+	printf("Time working = %lf\n", time);
+}
+
+void Generate_threads(Segment segments[]){
+    pthread_t array_thread_id[NUMBER_OF_THREADS];
+    int result, i = 0;
+    //множим нити и отправляем каждый сегмент на обработку в его нить
+	for (i = 0; i < NUMBER_OF_THREADS; i++) {
+		result = pthread_create(&(array_thread_id[i]), (pthread_attr_t *)NULL, Sum, &(segments[i]));
+        if (result != 0) {
+			printf ("Error on thread create, return value = %d\n", result);
+			exit(-1);
+    	}
 	}
-	fclose(fp);
-
-    fp = fopen("count.txt", "r");
-    while (fscanf(fp, "%d:%d\n", &type, &count) == 2) {
-		dish[type].count = count;
+	//чтобы всех дождались
+	for (i = 0; i < NUMBER_OF_THREADS; i++) {
+		pthread_join(array_thread_id[i], NULL);
 	}
-	fclose(fp);
+}
 
-    printf ("%d %d %d %d\n", 0, dish[0].count, dish[0].wash_time, dish[0].wipe_time);
-    printf ("%d %d %d %d\n", 1, dish[1].count, dish[1].wash_time, dish[1].wipe_time);
-    printf ("%d %d %d %d\n", 2, dish[2].count, dish[2].wash_time, dish[2].wipe_time);
-    printf ("%d %d %d %d\n", 3, dish[3].count, dish[3].wash_time, dish[3].wipe_time);
+int main () {
+	array = (float *) calloc(DATA_SIZE, sizeof(float));
+	int i = 0;
+	srand(time(NULL));
+    make_data();
+	struct timespec start, finish;
+	double time_working = 0;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	Segment segments[NUMBER_OF_THREADS];
+	int segment_size = DATA_SIZE/NUMBER_OF_THREADS;//делим массив на одинаковые части - сегменты (по кол-ву нитей)
+	//заполнение сегментов началом, концом и индексами
 
-    return 0; 
+    Fill_segments(segments, segment_size);
+    Generate_threads(segments);   
+
+	double sum = 0, sum_square = 0, math_expectation = 0, math_expectation_of_square = 0;
+	//сложение посчитанных значений для каждого сегмента
+	for (i = 0; i < NUMBER_OF_THREADS; i++) {
+		sum += segment_sum[i];
+		sum_square += segment_sum_square[i];
+	}
+	
+	math_expectation = sum / DATA_SIZE;
+	math_expectation_of_square = sum_square / DATA_SIZE;
+
+	clock_gettime(CLOCK_MONOTONIC, &finish);
+	time_working = (finish.tv_sec - start.tv_sec); 
+	time_working += (finish.tv_nsec - start.tv_nsec) / 1e9; 
+	
+    results_out(sum, math_expectation, math_expectation_of_square - pow(math_expectation, 2), time_working);
+	free(array);
+    return 0;
 }
