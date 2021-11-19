@@ -1,4 +1,0 @@
-3
-1 echo Hello world to problem4
-2 pwd
-3 ls -al
