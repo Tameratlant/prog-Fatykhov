@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <math.h>
 
-#define LIMIT 5
+#define LIMIT 1
 int semid; /* IPC дескриптор для массива IPC семафоров */
 
 
@@ -81,8 +81,9 @@ int main()
     }
     //maxlen = sizeof(struct Info) + 1;
     maxlen = 300;
+    mysemop(LIMIT );
     while(1){
-        mysemop(LIMIT);
+        
         // В бесконечном цикле принимаем сообщения 
 
         if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, maxlen, 1, 0)) < 0){
@@ -99,6 +100,7 @@ int main()
             }
         mysemop(-1);
         int result = fork();
+        sleep(5);
         if (result > 0) {
 
             if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, maxlen, 2, 0)) < 0){
@@ -108,6 +110,7 @@ int main()
 
         //И вот уже тут отсылаем сообщение обратно клиенту
         mybuf.mtype = mybuf.info.id;
+        
         mybuf.info.c = mybuf.info.a * mybuf.info.b;
         if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
             printf("Can\'t send message to queue\n");
