@@ -1,4 +1,4 @@
-//Запускать с - pthread -lm -O3
+//Запускать с -pthread -lm -O3
 //Для упрощения дебага почти все, что можно, вынесено в отдельные функции
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -11,7 +11,7 @@
 #include <math.h>
 
 
-#define NUMBER_OF_THREADS 2
+#define NUMBER_OF_THREADS 4
 #define DATA_SIZE 100000000
 
 float *array = NULL;
