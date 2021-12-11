@@ -9,18 +9,23 @@
 #include <fcntl.h>
 #include <math.h>
 
-#define Table 1
+#define TABLE 2
 
+int maxx (int a, int b) {
+    if (a > b) return a;
+    if (a <= b) return b;
+}
 
 struct Dish {
         int count;
         int wash_time;
         int wipe_time;
 }; 
-
+int semid; /* IPC дескриптор для массива IPC семафоров */
 struct current_dish {
     int type;
     int wipe_time;
+    int stop;
 };
 
     struct mymsgbuf
@@ -28,13 +33,7 @@ struct current_dish {
         long mtype;
         struct current_dish current_dish;
         }mybuf;
-//Почему - то обычный встренный max не работал 
-int maxx (int a, int b) {
-    if (a > b) return a;
-    if (a <= b) return b;
-}
 
-// Функция считывает данные с файлов и сохраняет в массив
 void Fill_data (struct Dish dish[]) { 
     int type;
     int time;
@@ -64,7 +63,6 @@ void Fill_data (struct Dish dish[]) {
 }
 
 
-int semid; /* IPC дескриптор для массива IPC семафоров */
 
 void mysemop(int a) {
     struct sembuf mybuf;
@@ -77,16 +75,18 @@ void mysemop(int a) {
 	}
 }
 
+/////////////////////////////////////////////////////////////
+//ВСЕ ВЫШЕ РАБОТАЕТ
+
 void wash(struct Dish dish[], int msqid) {
+    //printf("!!\n");
     
-    mysemop(-1);
     int i = 0;
     int len = sizeof(struct Dish);
     while(1){
-        
+        mysemop(-1);
         
         if (dish[i].count == -1) {
-            
             mybuf.current_dish.type = -1;
             mybuf.mtype = 1;
             if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
@@ -94,112 +94,110 @@ void wash(struct Dish dish[], int msqid) {
                 msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
                 exit(-1);
             }
-            
+            printf("91\n");
             break;
         }
-        if (dish[i].count != -1){
-            //printf("95\n");
-            printf ("Start washing type %d plate\n", i);
-            printf("%d\n",dish[i].wash_time);
-            sleep(dish[i].wash_time);
+        printf ("Start washing type %d plate\n", i);
+        sleep(dish[i].wash_time);
+            printf ("End washing type %d plate\n", i);
+            mybuf.current_dish.type = i;
+            mybuf.current_dish.wipe_time = dish[i].wipe_time;
             
-            //printf("99\n");
-                //dish[i].count = dish[i].count -1;
-                printf ("End washing type %d plate\n", i);
-                mybuf.current_dish.type = i;
-                mybuf.current_dish.wipe_time = dish[i].wipe_time;
+            if (dish[i+1].count == -1){
                 mybuf.mtype = 1;
+                mybuf.current_dish.stop = 1;
                 if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
                     printf("Can\'t send message to queue\n");
                     msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
                     exit(-1);
                 }
-                i++;
-        }
+            }
+            
+            mybuf.mtype = 1;
+            if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
+                printf("Can\'t send message to queue\n");
+                msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
+                exit(-1);
+            }
+            i++;
+            sleep(0.1);
     }
-    mysemop(1);
+    //mysemop(1);
 }
 
 
 void wipe(int msqid) {
-    mysemop(-1);
+    
     int len;
     while(1){
-        if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, 100, 1, 0)) < 0){
+        
+        if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, 200, 1, 0)) < 0){
             printf("Can\'t receive message from queue\n");
+            if (errno == EINVAL) printf("EINVAL");
             exit(-1);
         }
-        if (mybuf.current_dish.type == -1){
+        mysemop(1);
+        if (mybuf.current_dish.stop == 1){
+            sleep(mybuf.current_dish.wipe_time);
+            printf("End wipe last palte\n");
             exit(-1);
         }
         printf("Start to wipe type %d plate\n", mybuf.current_dish.type);
         sleep(mybuf.current_dish.wipe_time);
         printf("End wipe type %d palte\n", mybuf.current_dish.type);
     }
-    mysemop(1);
+    
 }
 
-int main() {
 
 
-    //fflush(stdout);
+int main(){
+     fflush(stdout);
+     //fflush(stdin);
 
-
-    
     // Определяем размер будующего массива
     FILE* fp = NULL;
-    int type, count, max_type;
-    
     fp = fopen("count.txt", "r");
-    
+    int type = -1, count = -1, max_type=-1;
     while (fscanf(fp, "%d:%d\n", &type, &count) == 2) {
         max_type = maxx(max_type, type);
 	}
+    
 	fclose(fp);
     
-
-    struct Dish* dish = (struct Dish*)calloc(max_type + 4, sizeof(struct Dish));
+    struct Dish* dish = (struct Dish*)calloc(max_type + 2, sizeof(struct Dish));
     //Прописываем "Стоп - слово"
-    for (int i = 0; i<max_type + 2; i++){
-        dish[i].count=-1;
-    }
-    //dish[max_type + 1].count=-1;
-
-    key_t key; // IPC ключ 
+    dish[max_type + 1].count=-1;
     
+
     Fill_data (dish);
-    for(int i = 0; i< 7; i++){
-        printf("%d\n",dish[i].count);
-    }
+  
 
-    char pathname[] = "Dish.c"; ///Имя файла, использующееся для генерации ключа. Файл с таким именем должен существовать в текущей директории 
+   char pathname[] = "Dish.c"; /* Имя файла, использующееся для генерации ключа. Файл с таким именем должен существовать в текущей директории */
 
-    
+    key_t key; /* IPC ключ */
 
-    // Генерируем IPC ключ из имени файла dish.c в текущей директории и номера экземпляра области разделяемой памяти 0 
+    /* Генерируем IPC ключ из имени файла dish.c в текущей директории
+    и номера экземпляра области разделяемой памяти 0 */
 
     if((key = ftok(pathname,0)) < 0){
         printf("Can\'t generate key\n");
         exit(-1);
     }
 
-    // Пытаемся получить доступ по ключу к массиву семафоров, если он существует,
-    //или создать его из одного семафора, если он еще не существует, с правами доступа
-    //read & write для всех пользователей 
+    /* Пытаемся получить доступ по ключу к массиву семафоров, если он существует,
+    или создать его из одного семафора, если он еще не существует, с правами доступа
+    read & write для всех пользователей */
 
     if((semid = semget(key, 2, 0666 | IPC_CREAT)) < 0){
         printf("Can\'t get semid\n");
         exit(-1);
     }
-    
 
-    //устанавливаем начальное значение семафора
-
-    mysemop(Table);
+    mysemop(TABLE);
 
     int result;
-
-    if ((result = fork()) < 0){
+     if ((result = fork()) < 0){
         printf("Can't do chiled\n");
         exit(-1);
     }
@@ -212,7 +210,7 @@ int main() {
     }
 
 
-    /*
+    
     if (result == 0) {
         //printf("!!\n");
         wash(dish, msqid);
@@ -221,6 +219,13 @@ int main() {
     if (result > 0) {
         wipe(msqid);
     }
-    */
+
+    msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
+    semctl(semid, IPC_RMID, (struct msqid_ds *) NULL);
+    //free(&dish);
+    
     return 0; 
+
+
+
 }
