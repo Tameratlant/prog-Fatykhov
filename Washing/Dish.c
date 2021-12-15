@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <math.h>
 
-#define TABLE 2
+#define TABLE 3
 
 int maxx (int a, int b) {
     if (a > b) return a;
@@ -22,10 +22,12 @@ struct Dish {
         int wipe_time;
 }; 
 int semid; /* IPC дескриптор для массива IPC семафоров */
+int msqid;
 struct current_dish {
     int type;
     int wipe_time;
     int stop;
+    int next_time;
 };
 
     struct mymsgbuf
@@ -71,6 +73,8 @@ void mysemop(int a) {
     mybuf.sem_num = 0;
 	if (semop(semid , &mybuf , 1) < 0) {
 		printf("Can\'t wait for condition\n");
+        msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
+        semctl(semid, IPC_RMID, (struct msqid_ds *) NULL);
         exit(-1);
 	}
 }
@@ -94,33 +98,42 @@ void wash(struct Dish dish[], int msqid) {
                 msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
                 exit(-1);
             }
-            printf("91\n");
+            //printf("91\n");
             break;
         }
+        
+
+
+
         printf ("Start washing type %d plate\n", i);
         sleep(dish[i].wash_time);
-            printf ("End washing type %d plate\n", i);
-            mybuf.current_dish.type = i;
-            mybuf.current_dish.wipe_time = dish[i].wipe_time;
+        printf ("End washing type %d plate\n", i);
+        mybuf.current_dish.type = i;
+        mybuf.current_dish.wipe_time = dish[i].wipe_time;
+
+
+
             
-            if (dish[i+1].count == -1){
-                mybuf.mtype = 1;
-                mybuf.current_dish.stop = 1;
-                if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
-                    printf("Can\'t send message to queue\n");
-                    msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
-                    exit(-1);
-                }
-            }
-            
+        if (dish[i+1].count == -1){
             mybuf.mtype = 1;
+            mybuf.current_dish.stop = 1;
+            mybuf.current_dish.next_time = dish[i+1].wipe_time;
             if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
                 printf("Can\'t send message to queue\n");
                 msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
                 exit(-1);
             }
-            i++;
-            sleep(0.1);
+            //printf("send stop\n");
+        }
+            
+        mybuf.mtype = 1;
+        if (msgsnd(msqid, (struct msgbuf *) &mybuf, len, 0) < 0){
+            printf("Can\'t send message to queue\n");
+            msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
+            exit(-1);
+        }
+        i++;
+        sleep(0.1);
     }
     //mysemop(1);
 }
@@ -128,23 +141,33 @@ void wash(struct Dish dish[], int msqid) {
 
 void wipe(int msqid) {
     
-    int len;
+    int len = 2*sizeof(struct Dish);
+    int status;
     while(1){
         
-        if(( len = msgrcv(msqid, (struct msgbuf *) &mybuf, 200, 1, 0)) < 0){
+        if(( status = msgrcv(msqid, (struct msgbuf *) &mybuf, len, 1, 0)) < 0){
             printf("Can\'t receive message from queue\n");
             if (errno == EINVAL) printf("EINVAL");
             exit(-1);
         }
         mysemop(1);
         if (mybuf.current_dish.stop == 1){
+            printf("Start to wipe type %d plate\n", mybuf.current_dish.type);
             sleep(mybuf.current_dish.wipe_time);
+            printf("End wipe type %d palte\n", mybuf.current_dish.type);
+            /*
+            printf("Start wipe last palte\n");
+            sleep(mybuf.current_dish.next_time);
             printf("End wipe last palte\n");
+            */
+            msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
+            semctl(semid, IPC_RMID, (struct msqid_ds *) NULL);
             exit(-1);
         }
         printf("Start to wipe type %d plate\n", mybuf.current_dish.type);
         sleep(mybuf.current_dish.wipe_time);
         printf("End wipe type %d palte\n", mybuf.current_dish.type);
+        sleep(0.2);
     }
     
 }
@@ -203,25 +226,31 @@ int main(){
     }
 
     //Соорудим очередь сообщений для общения между процессами
-    int msqid;
+    
     if((msqid = msgget(key, 0666 | IPC_CREAT)) < 0){
     printf("Can\'t get msqid\n");
     exit(-1);
     }
 
-
+    int pid_1, pid_2;
     
     if (result == 0) {
         //printf("!!\n");
+        pid_1 = getpid();
         wash(dish, msqid);
+        
+        exit(1);
     }
 
     if (result > 0) {
+        pid_2 = getpid();
         wipe(msqid);
     }
+    
 
-    msgctl(msqid, IPC_RMID, (struct msqid_ds *) NULL);
-    semctl(semid, IPC_RMID, (struct msqid_ds *) NULL);
+    
+
+    
     //free(&dish);
     
     return 0; 
