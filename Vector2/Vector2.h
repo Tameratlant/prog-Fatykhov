@@ -45,7 +45,7 @@ public:
     Vector2 operator+() const;
 
     //Перпендикуляр
-    Vector2 Perp();
+    Vector2 Perp() const;
 
     //Оператор вывода
     friend std::ostream& operator << (std::ostream& os, const Vector2& out);
@@ -55,13 +55,13 @@ public:
 
 
     //Операторы += и -=
-    Vector2 operator+=(Vector2& const other);
+    Vector2 operator+=(Vector2 const & other);
 
-    Vector2 operator-=(Vector2& const other);
+    Vector2 operator-=(Vector2 const& other);
 
-    Vector2 rotate(float angle);
+    Vector2 rotate(const float angle);
 
-    Vector2 getRotate(float angle);
+    Vector2 getRotate(const float angle);
 };
 
 #endif
