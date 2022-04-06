@@ -100,7 +100,7 @@ Vector2 Vector2::operator+() const
 }
 
 //Перпендикуляр
-Vector2 Vector2::Perp()
+Vector2 Vector2::Perp() const
 {
     Vector2 result;
     result.x = -x;
@@ -122,14 +122,14 @@ std::istream& operator >> (std::istream& is, Vector2& in)
 }
 
 //Операторы += и -=
-Vector2 Vector2::operator+=(Vector2& const other)
+Vector2 Vector2::operator+=(Vector2 const&  other)
 {
     Vector2 result;
     result.x = other.x + x;
     result.y = other.y + y;
     return result;
 }
-Vector2 Vector2::operator-=(Vector2& const other)
+Vector2 Vector2::operator-=(Vector2 const&  other)
 {
     Vector2 result;
     result.x = other.x - x;
@@ -137,7 +137,7 @@ Vector2 Vector2::operator-=(Vector2& const other)
     return result;
 }
 
-Vector2 Vector2::rotate(float angle)
+Vector2 Vector2::rotate(const float angle)
 {
     x = x * cos(angle) - y * sin(angle);
     y = x * sin(angle) - y * cos(angle);
@@ -147,7 +147,7 @@ Vector2 Vector2::rotate(float angle)
     return result;
 }
 
-Vector2 Vector2::getRotate(float angle)
+Vector2 Vector2::getRotate(const float angle)
 {
     Vector2 result(0, 0);
     result.x = x * cos(angle) - y * sin(angle);
