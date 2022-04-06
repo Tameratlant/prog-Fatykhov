@@ -1,158 +1,67 @@
-struct Vector2
+#pragma once
+#ifndef VECTOR_IMPL__
+#define VECTOR_IMPL__
+#include <iostream>
+
+struct Vector2 final
 {
-    float x, y;
+    float x = 0, y = 0;
 public:
-    Vector2(float x = 0, float y = 0) : x(x), y(y)
-    {}
+    Vector2(float x , float y );
 
     //Вывести длину
-    float Len()
-    {
-        return sqrt(x * x + y * y);
-    }
+    float  Len() const;
 
     //Вывести квадрат длины
-    float SquareLen()
-    {
-        return x * x + y * y;
-    }
+    float SquareLen() const;
 
     //Вывести нормированный вектор
-    Vector2 Norm()
-    {
-        Vector2 result;
-        result.x = x / sqrt(x * x + y * y);
-        result.y = y / sqrt(x * x + y * y);
-        return result;
-    }
+    Vector2 Norm() const;
 
     //Оператор + 
-    Vector2 operator+(const Vector2& other)
-    {
-        Vector2 result;
-        result.x = x + other.x;
-        result.y = y + other.y;
-        return result;
-    }
-    //Оператор - 
-    Vector2 operator-(const Vector2& other)
-    {
-        Vector2 result;
-        result.x = x - other.x;
-        result.y = y - other.y;
-        return result;
-    }
+    Vector2 operator+(const Vector2& other);
 
+    //Оператор - 
+    Vector2 operator-(const Vector2& other);
 
     //Оператор / на скаляр
-    Vector2 operator/(float a)
-    {
-        Vector2 result;
-        result.x = x / a;
-        result.y = y / a;
-        return result;
-    }
+    Vector2 operator/(float a);
 
     //Оператор * с двух сторон
-    Vector2 operator*(float a)
-    {
-        Vector2 result;
-        result.x = x * a;
-        result.y = y * a;
-        return result;
-    }
-    friend Vector2 operator*(float a, Vector2 b)
-    {
-        Vector2 result;
-        result.x = a * b.x;
-        result.y = a * b.y;
-        return result;
-    }
+    Vector2 operator*(float a);
+
+    friend Vector2 operator*(const float a, Vector2 b);
 
     //Скалярное произведение
-    float operator*(Vector2& other) const
-    {
-        return(x * other.x + y * other.y) / sqrt(x * x + y * y);
-    }
+    float operator*(Vector2& other) const;
 
     //Векторниое произведение 
-    float operator^(Vector2& other) const
-    {
-        Vector2 result;
-        result.x = x * other.y;
-        result.y = y * other.x;
-        return result.Len();
-    }
+    float operator^(Vector2& other) const;
 
     //Унарный -
-    Vector2 operator-() const
-    {
-        Vector2 result;
-        result.x = -x;
-        result.y = -y;
-        return result;
-    }
+    Vector2 operator-() const;
 
     //Унарный +
-    Vector2 operator+() const
-    {
-        Vector2 result;
-        return result;
-    }
+    Vector2 operator+() const;
 
     //Перпендикуляр
-    Vector2 Perp()
-    {
-        Vector2 result;
-        result.x = -x;
-        result.y = y;
-        return result;
-    }
+    Vector2 Perp();
 
     //Оператор вывода
-    friend std::ostream& operator << (std::ostream& os, const Vector2& out)
-    {
-        os << out.x << " " << out.y << "\n";
-        return os;
-    }
+    friend std::ostream& operator << (std::ostream& os, const Vector2& out);
+
     //Оператор ввода
-    friend std::istream& operator >> (std::istream& is, Vector2& in)
-    {
-        is >> in.x >> in.y;
-        return is;
-    }
+    friend std::istream& operator >> (std::istream& is, Vector2& in);
+
 
     //Операторы += и -=
-    Vector2& operator+=(Vector2& const other)
-    {
-        Vector2 result;
-        result.x = other.x + x;
-        result.y = other.y + y;
-        return result;
-    }
-    Vector2& operator-=(Vector2& const other)
-    {
-        Vector2 result;
-        result.x = other.x - x;
-        result.y = other.y - y;
-        return result;
-    }
+    Vector2 operator+=(Vector2& const other);
 
-    Vector2 rotate(float angle)
-    {
-        x = x * cos(angle) - y * sin(angle);
-        y = x * sin(angle) - y * cos(angle);
-        Vector2 result(0, 0);
-        result.x = x;
-        result.y = y;
-        return result;
-    }
+    Vector2 operator-=(Vector2& const other);
 
-    Vector2 getRotate(float angle)
-    {
-        Vector2 result(0, 0);
-        result.x = x * cos(angle) - y * sin(angle);
-        result.y = x * sin(angle) - y * cos(angle);
-        return result;
-    }
+    Vector2 rotate(float angle);
+
+    Vector2 getRotate(float angle);
 };
+
+#endif
